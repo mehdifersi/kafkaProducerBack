@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 @RestController
@@ -22,14 +24,17 @@ public class SendMessage {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @PostMapping("/produce/file")
-    public ResponseEntity<String> sendFileMessageKafka(@RequestPart("file") MultipartFile file,
-                                                       @RequestPart("type") String type,
-                                                        @RequestPart("raison_sociale") String raison_sociale) throws  IOException {
 
-        // Validate file (optional)
+    @PostMapping("/produce/file")
+    public ResponseEntity<Map<String, String>> sendFileMessageKafka(@RequestPart("file") MultipartFile file,
+                                                                    @RequestPart("type") String type,
+                                                                    @RequestPart("raison_sociale") String raison_sociale) throws IOException {
+
+        // Validate file
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please select a file to upload");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Please select a file to upload");
+            return ResponseEntity.badRequest().body(response);
         }
 
         // Convert multipart file to byte array
@@ -44,11 +49,11 @@ public class SendMessage {
         String jsonMessage = objectMapper.writeValueAsString(message);
 
         // Send the file bytes to Kafka
-        kafkaTemplate.send("company-Talan",
-                jsonMessage
-                );
+        kafkaTemplate.send("company-" + raison_sociale, jsonMessage);
 
-        return ResponseEntity.ok("File and type were sent to Kafka topic Succefully: company-google123");
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "File and type were sent to Kafka topic successfully: company-" + raison_sociale);
+        return ResponseEntity.ok(response);
     }
 
 }
